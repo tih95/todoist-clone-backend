@@ -4,10 +4,6 @@ const bcrypt = require('bcrypt');
 const config = require('../config');
 const pool = require('../db');
 
-userRouter.get('/', (req, res) => {
-  res.status(200).send('hello user');
-})
-
 userRouter.post('/signup', async (req, res) => {
   const body = req.body;
 
@@ -20,6 +16,10 @@ userRouter.post('/signup', async (req, res) => {
       VALUES ($1, $2, $3)
       RETURNING *
     `, [body.name, body.email, passwordHash])
+
+    if (result.rows > 0) {
+      return res.status(400).json({ err: 'User already exists' });
+    }
 
     const retUser = result.rows[0];
 
