@@ -4,10 +4,20 @@ const bcrypt = require('bcrypt');
 const config = require('../config');
 const pool = require('../db');
 
-userRouter.post('/signup', async (req, res) => {
+userRouter.post('/register', async (req, res) => {
   const body = req.body;
 
   try {
+    
+    const user = await pool.query(`
+      SELECT * FROM users
+      WHERE email = $1
+    `, [body.email])
+
+    if (user.rows.length > 0) {
+      return res.status(401).json({ errMsg: 'Account already exists' });
+    }
+
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(body.password, saltRounds);
     const result = await pool.query(`
@@ -16,10 +26,6 @@ userRouter.post('/signup', async (req, res) => {
       VALUES ($1, $2, $3)
       RETURNING *
     `, [body.name, body.email, passwordHash])
-
-    if (result.rows > 0) {
-      return res.status(400).json({ err: 'User already exists' });
-    }
 
     const retUser = result.rows[0];
 
@@ -31,9 +37,8 @@ userRouter.post('/signup', async (req, res) => {
 
     res.status(200).json({ token, name: retUser.name, email: retUser.email });
   }
-  catch(e) {
-    console.log('error detail', e.detail);
-    res.status(400).json({ msg: 'hello' })
+  catch(err) {
+    res.status(500).send({ err })
   }
 })
 
@@ -47,7 +52,7 @@ userRouter.post('/login', async (req, res) => {
     `, [body.email]);
 
     if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'User does not exist' });
+      return res.status(401).json({ errMsg: 'User account does not exist' });
     }
 
     const loggedInUser = result.rows[0];
@@ -63,11 +68,11 @@ userRouter.post('/login', async (req, res) => {
       res.status(200).json({ token, name: loggedInUser.name, email: loggedInUser.email });
     }
     else {
-      return res.status(400).json({ error: 'Password is incorrect' })
+      return res.status(400).json({ errMsg: 'Password is incorrect' })
     }
   }
-  catch(e) {
-    res.status(400).json({ error: 'Log In failed' })
+  catch(err) {
+    res.status(500).json({ err })
   }
 })
 
