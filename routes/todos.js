@@ -1,12 +1,27 @@
 const todoRouter = require('express').Router();
-const e = require('cors');
 const pool = require('../db');
+const authorizeToken = require('../middleware/authorizeToken');
 
-todoRouter.get('/', (req, res) => {
+todoRouter.get('/', authorizeToken, async (req, res) => {
+  const user = req.user;
 
+  try {
+    const result = await pool.query(`
+      SELECT * FROM todos
+      WHERE u_id = $1
+    `, [user.id]);
+
+    const todos = result.rows;
+
+    res.json(todos);
+  }
+  catch(e) {
+    res.json(500).send({ errMsg: 'failure' });
+  }
+  
 })
 
-todoRouter.post('/', async (req, res) => {
+todoRouter.post('/', authorizeToken, async (req, res) => {
   const body = req.body;
 
   try {

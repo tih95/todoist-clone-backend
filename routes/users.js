@@ -20,6 +20,10 @@ userRouter.post('/register', async (req, res) => {
 
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(body.password, saltRounds);
+
+    // begin transaction of creating a user and a default Inbox project
+    await pool.query('BEGIN');
+
     const result = await pool.query(`
       INSERT INTO users
       (name, email, password_hash)
@@ -29,8 +33,17 @@ userRouter.post('/register', async (req, res) => {
 
     const retUser = result.rows[0];
 
+    // automatically creates a new project 'inbox'
+    await pool.query(`
+    INSERT INTO projects
+    (name, u_id)
+    VALUES ('inbox', $1)
+  `, [retUser.u_id]);
+
+    await pool.query('COMMIT');
+    console.log('got here');
     const userForToken = {
-      id: retUser.id
+      id: retUser.u_id
     }
 
     const token = jwt.sign(userForToken, config.JWT_SECRET);
@@ -59,8 +72,9 @@ userRouter.post('/login', async (req, res) => {
     const passwordCorrect = await bcrypt.compare(body.password, loggedInUser.password_hash);
 
     if (passwordCorrect) {
+      console.log('loggedInUser');
       const userForToken = {
-        id: loggedInUser.id
+        id: loggedInUser.u_id
       }
 
       const token = jwt.sign(userForToken, config.JWT_SECRET);
