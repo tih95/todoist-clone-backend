@@ -3,7 +3,6 @@ const config = require('../config');
 
 const getTokenFromAuth = request => {
   const authType = request.get('authorization');
-  console.log('authType', authType);
   if (authType && authType.toLowerCase().startsWith('bearer ')) {
     return authType.substring(7);
   }
@@ -14,9 +13,6 @@ const getTokenFromAuth = request => {
 const authorizeToken = (req, res, next) => {
   const tokenFromHeader = getTokenFromAuth(req);
   const decodedToken = jwt.verify(tokenFromHeader, config.JWT_SECRET);
-  console.log('tokenfromheader', tokenFromHeader);
-  console.log('decodedToken', decodedToken);
-  console.log('secret', config.JWT_SECRET);
   if (!tokenFromHeader || !decodedToken.id) {
     res.status(403).json({ errMsg: 'missing or invalid token' })
   }

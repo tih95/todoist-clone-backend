@@ -28,16 +28,17 @@ projectRouter.post('/', authorizeToken, async (req, res) => {
   try {
     const result = await pool.query(`
       INSERT INTO projects
-      (name, u_id)
-      VALUES ($1, $2)
+      (name, u_id, color)
+      VALUES ($1, $2, $3)
       RETURNING *
-    `, [body.name, user.id])
+    `, [body.name, user.id, body.color])
 
     const createdProject = result.rows[0];
-
+    console.log('createdProject', createdProject);
     res.status(200).json(createdProject);
   }
   catch(e) {
+    console.log('got here');
     return res.status(400).json({ error: e });
   }
 });
