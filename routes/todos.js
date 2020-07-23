@@ -3,14 +3,22 @@ const pool = require('../db');
 const authorizeToken = require('../middleware/authorizeToken');
 
 todoRouter.get('/', authorizeToken, async (req, res) => {
-	const user = req.user;
+  const { user, query } = req;
+
+  let queryString = `SELECT * FROM todos WHERE u_id = $1`;
+
+  if (query.sort === 'date') {
+    queryString += ' ORDER BY due_date ASC';
+  }
+  else if (query.sort === 'name') {
+    queryString += ' ORDER BY task ASC';
+  }
+  else if (query.sort === 'priority') {
+    queryString += ' ORDER BY priority DESC';
+  }
 
 	try {
-		const result = await pool.query(
-			`
-      SELECT * FROM todos
-      WHERE u_id = $1
-    `,
+		const result = await pool.query(queryString,
 			[ user.id ]
 		);
 

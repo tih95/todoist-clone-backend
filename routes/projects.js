@@ -70,4 +70,25 @@ projectRouter.post('/:id/addTodo', authorizeToken, async (req, res) => {
   }
 })
 
+projectRouter.delete('/:id', authorizeToken, async (req, res) => {
+  const user = req.user;
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(`
+    DELETE FROM projects
+    WHERE p_id=$1
+    RETURNING *
+  `, [id])
+
+    const deletedTodo = result.rows[0];
+
+    res.json(deletedTodo);
+  }
+  catch(e) {
+    res.status(400).json({errMsg: 'something happened'})
+  }
+  
+})
+
 module.exports = projectRouter;
