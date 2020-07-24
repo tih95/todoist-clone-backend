@@ -70,6 +70,28 @@ projectRouter.post('/:id/addTodo', authorizeToken, async (req, res) => {
   }
 })
 
+projectRouter.put('/:id', authorizeToken, async (req, res) => {
+  const user = req.user;
+  const { id } = req.params;
+  const body = req.body;
+  console.log(id);
+  try {
+    const result = await pool.query(`
+      UPDATE projects 
+      SET name=$1, color=$2
+      WHERE p_id=$3
+      RETURNING *
+    `, [body.name, body.color, id]);
+
+    const editedTodo = result.rows[0];
+
+    res.json(editedTodo);
+  }
+  catch(e) {
+    res.status(400).json({errMsg: 'something happend'});
+  }
+})
+
 projectRouter.delete('/:id', authorizeToken, async (req, res) => {
   const user = req.user;
   const { id } = req.params;
