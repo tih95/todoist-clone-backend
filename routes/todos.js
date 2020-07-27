@@ -3,24 +3,22 @@ const pool = require('../db');
 const authorizeToken = require('../middleware/authorizeToken');
 
 todoRouter.get('/', authorizeToken, async (req, res) => {
-  const { user, query } = req;
+	const { user, query } = req;
 
-  let queryString = `SELECT * FROM todos WHERE u_id = $1`;
+	let queryString = `SELECT * FROM todos WHERE u_id = $1`;
 
-  if (query.sort === 'date') {
-    queryString += ' ORDER BY due_date ASC';
-  }
-  else if (query.sort === 'name') {
-    queryString += ' ORDER BY task ASC';
-  }
-  else if (query.sort === 'priority') {
-    queryString += ' ORDER BY priority DESC';
-  }
+	if (query.sort === 'date') {
+		queryString += ' ORDER BY due_date ASC';
+	}
+	else if (query.sort === 'name') {
+		queryString += ' ORDER BY task ASC';
+	}
+	else if (query.sort === 'priority') {
+		queryString += ' ORDER BY priority DESC';
+	}
 
 	try {
-		const result = await pool.query(queryString,
-			[ user.id ]
-		);
+		const result = await pool.query(queryString, [ user.id ]);
 
 		const todos = result.rows;
 
@@ -58,31 +56,53 @@ todoRouter.put('/:id', authorizeToken, async (req, res) => {
 	const { id } = req.params;
 	const body = req.body;
 
-  try {
-    const result = await pool.query(`
+	try {
+		const result = await pool.query(
+			`
       SELECT * FROM todos WHERE t_id=$1
-    `, [id]);
-    
-    if (result.rows.length === 0) {
-      res.status(404).json({errMsg: 'That todo item does not exist'})
-    }
+    `,
+			[ id ]
+		);
 
-    const updatedTodo = await pool.query(
-      `
+		if (result.rows.length === 0) {
+			res.status(404).json({ errMsg: 'That todo item does not exist' });
+		}
+
+		const updatedTodo = await pool.query(
+			`
       UPDATE todos
       SET task = $1, completed=$2, priority=$3, due_date=$4, p_id=$5
       WHERE t_id=$6
       RETURNING * 
     `,
-      [ body.task, body.completed, body.priority, body.due_date, body.p_id, id ]
-    );
+			[ body.task, body.completed, body.priority, body.due_date, body.p_id, id ]
+		);
 
-    res.json(updatedTodo.rows[0]);
-  }
-  catch(e) {
-    res.status(400).json({ errMsg: 'something happened' });
-  }
-	
+		res.json(updatedTodo.rows[0]);
+	} catch (e) {
+		res.status(400).json({ errMsg: 'something happened' });
+	}
+});
+
+todoRouter.delete('/:id', authorizeToken, async (req, res) => {
+	const { id } = req.params;
+
+	try {
+		const result = await pool.query(
+			`
+    DELETE FROM todos 
+    WHERE t_id=$1
+    RETURNING *
+  `,
+			[ id ]
+		);
+
+		const deletedTodo = result.rows[0];
+
+		res.json(deletedTodo);
+	} catch (e) {
+		res.status(400).json({ errMsg: 'something happened' });
+	}
 });
 
 module.exports = todoRouter;
