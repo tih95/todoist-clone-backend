@@ -42,14 +42,13 @@ userRouter.post('/register', async (req, res) => {
 		await pool.query(
 			`
     INSERT INTO projects
-    (name, u_id)
-    VALUES ('inbox', $1)
+    (name, u_id, color)
+    VALUES ('inbox', $1, '#000')
   `,
 			[ retUser.u_id ]
 		);
 
 		await pool.query('COMMIT');
-		console.log('got here');
 		const userForToken = {
 			id: retUser.u_id
 		};
@@ -64,7 +63,7 @@ userRouter.post('/register', async (req, res) => {
 
 userRouter.post('/login', async (req, res) => {
 	const body = req.body;
-
+	
 	try {
 		const result = await pool.query(
 			`
