@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const config = require('../config');
 const pool = require('../db');
+const authorizeToken = require('../middleware/authorizeToken');
 
 userRouter.post('/register', async (req, res) => {
 	const body = req.body;
@@ -96,5 +97,67 @@ userRouter.post('/login', async (req, res) => {
 		res.status(500).json({ err });
 	}
 });
+
+userRouter.put('/password', authorizeToken, async (req, res) => {
+	const user = req.user;
+	const body = req.body;
+
+	try {
+		const saltRounds = 10;
+		const passwordHash = await bcrypt.hash(body.password, saltRounds);
+
+		const result = await pool.query(`
+			UPDATE users
+			SET password_hash=$1
+			RETURNING *
+		`, [passwordHash]) 
+
+		const editedUser = result.rows[0];
+
+		res.json({editedUser});
+	}
+	catch(e) {
+		res.status(400).json({errMsg: 'Could not update'})
+	}
+})
+
+userRouter.put('/', authorizeToken, async (req, res) => {
+	const user = req.user;
+	const body = req.body;
+
+	try {
+
+		const userTaken = await pool.query(`
+			SELECT * FROM users
+			WHERE email = $1
+		`
+		, [body.email]
+		)
+
+		if (userTaken.rows.length > 0) {
+			return res.status(400).json({errMsg: 'User is already taken'})
+		}
+
+		const result = await pool.query(`
+			UPDATE users
+			SET name=$1, email=$2
+			WHERE u_id=$3
+			RETURNING *
+		`, [body.name, body.email, user.id])
+
+		const editedUser = result.rows[0];
+
+		const userForToken = {
+			id: editedUser.u_id
+		}
+
+		const newToken = jwt.sign(userForToken, config.JWT_SECRET);
+
+		res.json({ token: newToken, name: editedUser.name, email: editedUser.email})
+	}
+	catch(e) {
+		res.status(400).json({errMsg: 'Could not update account'});
+	}
+})
 
 module.exports = userRouter;
